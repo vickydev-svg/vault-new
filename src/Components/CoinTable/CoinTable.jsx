@@ -63,11 +63,15 @@ const CoinTable = () => {
       setCoins([])
         setLoading(true)
       const { data } = await axios.get(CoinList(currency));
-    const tokensAll = await axios.get(`https://api.pecunovus.net/wallet/get_all_tokens_wrap_new`)
-    
-    tokensAll.data.tokens.forEach((token) => {
+    const wrapToken = await axios.get(`https://api.pecunovus.net/wallet/get_all_tokens_wrap_new`)
+    const projectToken = await axios.get(`https://api.pecunovus.net/hootdex/all-project-token`)
+    const holdingToken = await axios.get('https://api.pecunovus.net/wallet/get_all_tokens_holding')
+  
+   
+    wrapToken.data.tokens.forEach((token) => {
       setCoins((prev) => [...prev, {
         ...token, market_cap: token.currentPrice * token.amount, image: token.logo,
+        current_price: token.currentPrice,
         price_change_percentage_24h_in_currency: ((token.currentPrice - token.firstPrice) /
           token.currentPrice) * 100,
         price_change_percentage_1h_in_currency:((token.currentPrice - token.firstPrice) /
@@ -77,9 +81,38 @@ const CoinTable = () => {
       
       }]);
     })
-    setCoins((prev)=>[...prev,...data]);
-    setLoading(false);
+  
+    projectToken.data.data.forEach((token) => {
+     
+      setCoins((prev) => [...prev,
+        {
+          ...token, market_cap: token.token_price * token.amount_issued,
+          name: token.token_name, symbol: token.token_symbol,
+          current_price: token.token_price,
+        price_change_percentage_24h_in_currency: (token.priceChange / (3 * token.token_price)),
+        price_change_percentage_1h_in_currency:(token.priceChange / (  token.token_price))
     
+      
+      }]);
+    })
+
+    holdingToken.data.tokens.forEach((token) => {
+     
+      setCoins((prev) => [...prev,
+        {
+          ...token, market_cap: token.token_price * token.amount_issued,
+          name: token.token_name, symbol: token.token_symbol,
+          current_price: token.token_price,
+          price_change_percentage_24h_in_currency: (token.priceChange / (3 * token.token_price)),
+          price_change_percentage_1h_in_currency:(token.priceChange / (  token.token_price))
+      
+    
+      
+      }]);
+    })
+    setCoins((prev)=>[...prev,...data]);
+   
+    setLoading(false);
     
 
         
@@ -89,8 +122,6 @@ const CoinTable = () => {
       
       const {data} = await axios.get(HistoricalChart(coins.id,days,currency))
     
-     
-      console.log(data)
       setHistoricalData(data.prices);
       
       
@@ -104,6 +135,21 @@ const CoinTable = () => {
     useEffect(()=>{
       fetchHistoricData();
     })
+  
+   function convertToInternationalCurrencySystem(labelValue) {
+      // Nine Zeroes for Billions
+      return Math.abs(Number(labelValue)) >= 1.0e9
+        ? (Math.abs(Number(labelValue)) / 1.0e9).toFixed(2) + 'b'
+        : // Six Zeroes for Millions
+        Math.abs(Number(labelValue)) >= 1.0e6
+        ? (Math.abs(Number(labelValue)) / 1.0e6).toFixed(2) + 'm'
+        : // Three Zeroes for Thousands
+        Math.abs(Number(labelValue)) >= 1.0e3
+        ? (Math.abs(Number(labelValue)) / 1.0e3).toFixed(2) + 'k'
+        : Math.abs(Number(labelValue))
+        ? Math.abs(Number(labelValue))?.toFixed(2)
+        : '0.00';
+    }
 
     // useEffect(() => {
     //   setTokenLoading(true);
@@ -139,6 +185,11 @@ const CoinTable = () => {
             coin?.name?.toLowerCase().includes(search) || coin?.symbol?.toLowerCase().includes(search)
         ))
       }
+  
+  // useEffect(() => {
+  //   coins.sort((a,b)=>a.market_cap-b.market_cap)
+  // },[coins])
+
   return (
     
        <Container style={{textAlign:"center"}}>
@@ -197,7 +248,7 @@ const CoinTable = () => {
                               </TableCell>
                               <TableCell align="right" style={{color:"black",width:"15%"}}>
                           <div className="price" style={{display:"flex"}}>
-                          {symbol}{row?.current_price? (row?.current_price?.toFixed(2)):(row?.currentPrice?.toFixed(2))}
+                                {symbol}{(row?.current_price?.toFixed(2))}
                           </div>
                           
                         </TableCell>
@@ -266,11 +317,10 @@ const CoinTable = () => {
                         </TableCell> */}
                       
                         <TableCell align="right" style={{color:"black",width:"10%"}}>
-                          {symbol}{" "}
-                          {(
-                            row?.market_cap?.toString().slice(0, -6)
-                          )}
-                          M
+                              {symbol}{" "}
+                              {convertToInternationalCurrencySystem( row?.market_cap)}
+                         
+                        
                         </TableCell>
                         
                             </TableRow>
