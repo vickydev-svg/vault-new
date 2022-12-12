@@ -59,11 +59,29 @@ const CoinTable = () => {
     const [volume,setVolume] = useState([])
     const [coinToken,setCoinToken] =  useState([])
 
-    const fetchCoins = async () =>{
+  const fetchCoins = async () => {
+      setCoins([])
         setLoading(true)
-        const {data} = await axios.get(CoinList(currency));
-        setCoins(data);
-        setLoading(false);
+      const { data } = await axios.get(CoinList(currency));
+    const tokensAll = await axios.get(`https://api.pecunovus.net/wallet/get_all_tokens_wrap_new`)
+    
+    tokensAll.data.tokens.forEach((token) => {
+      setCoins((prev) => [...prev, {
+        ...token, market_cap: token.currentPrice * token.amount, image: token.logo,
+        price_change_percentage_24h_in_currency: ((token.currentPrice - token.firstPrice) /
+          token.currentPrice) * 100,
+        price_change_percentage_1h_in_currency:((token.currentPrice - token.firstPrice) /
+        (3 * token.currentPrice)) *
+      100
+    
+      
+      }]);
+    })
+    setCoins((prev)=>[...prev,...data]);
+    setLoading(false);
+    
+    
+
         
     }
 
@@ -78,14 +96,7 @@ const CoinTable = () => {
       
   }
   
- console.log(historicalData)
-    // const changeCoins = async () =>{
-    //   const {data} = await axios.get(ChangingPrice(currency));
-    //   setCoinChange(data);
 
-    // }
-    // console.log(changeCoin)
-    console.log(coins)
     useEffect(()=>{
         fetchCoins();
         
@@ -94,24 +105,25 @@ const CoinTable = () => {
       fetchHistoricData();
     })
 
-    useEffect(() => {
-      setTokenLoading(true);
-      axios
-        .get(`https://api.pecunovus.net/wallet/get_all_tokens_wrap`)
-        .then((res) => {
-          if (res.data.status) {
-            setCoinToken(removeDuplicatedToken(res.data.tokens));
-          }
-          setTokenLoading(false);
-        })
-        .catch((err) => {
-          setTokenLoading(false);
-        });
+    // useEffect(() => {
+    //   setTokenLoading(true);
+    //   axios
+    //     .get(`https://api.pecunovus.net/wallet/get_all_tokens_wrap_new`)
+    //     .then((res) => {
+    //       if (res.data.status) {
+    //         res.data.tokens.forEach((token) => {
+    //           setCoinToken((prev)=>[...prev,{...token,}]);
+    //         })
+
+    //       }
+    //       setTokenLoading(false);
+    //     })
+    //     .catch((err) => {
+    //       setTokenLoading(false);
+    //     });
       
-    },[]);
-    console.log(coinToken);
-    const full = [...coins,...coinToken]
-    console.log(full)
+    // },[]);
+ 
     const darkTheme = createTheme({
 
         palette: {
@@ -124,7 +136,7 @@ const CoinTable = () => {
 
       const handleSearch = () =>{
         return coins.filter((coin)=>(
-            coin.name.toLowerCase().includes(search) || coin.symbol.toLowerCase().includes(search)
+            coin?.name?.toLowerCase().includes(search) || coin?.symbol?.toLowerCase().includes(search)
         ))
       }
   return (
@@ -153,8 +165,8 @@ const CoinTable = () => {
                  <TableBody>
 
                     {handleSearch().slice((page-1)*10,(page-1) * 10+10).map((row)=>{
-                        const profit = row.price_change_percentage_24h > 0;
-                        console.log()
+                        const profit = row?.price_change_percentage_24h > 0;
+                       
                         return (
                             <TableRow
                         
@@ -175,17 +187,17 @@ const CoinTable = () => {
                                 color:"black"
                               }}
                             >
-                              {row.symbol}
+                              {row?.symbol}
                             </span>
                             <span style={{ color: "darkgrey" }}>
-                              {row.name}
+                              {row?.name}
                             </span>
                           </div>
                           {/*  */}
                               </TableCell>
                               <TableCell align="right" style={{color:"black",width:"15%"}}>
                           <div className="price" style={{display:"flex"}}>
-                          {symbol}{numberWithCommas(row.current_price.toFixed(2))}
+                          {symbol}{row?.current_price? (row?.current_price?.toFixed(2)):(row?.currentPrice?.toFixed(2))}
                           </div>
                           
                         </TableCell>
@@ -204,7 +216,7 @@ const CoinTable = () => {
                            {profit ?<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" style={{color:"green"}}><path d="M201.4 137.4c12.5-12.5 32.8-12.5 45.3 0l160 160c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L224 205.3 86.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160z"/></svg> : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" style={{color:"red"}}><path d="M201.4 374.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 306.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>}
                           </div>
                            <div className="price_content" style={{width:"83%"}}>
-                           {row.price_change_percentage_1h_in_currency.toFixed(2)}%
+                           {row?.price_change_percentage_1h_in_currency?.toFixed(2)}%
                            </div>
                            
                            </div>
@@ -225,7 +237,7 @@ const CoinTable = () => {
                           {profit ?<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" style={{color:"green"}}><path d="M201.4 137.4c12.5-12.5 32.8-12.5 45.3 0l160 160c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L224 205.3 86.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l160-160z"/></svg> : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" style={{color:"red"}}><path d="M201.4 374.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 306.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>}
                           </div>
                            <div className="price_content" style={{width:"83%"}}>
-                           {row.price_change_percentage_24h_in_currency.toFixed(2)}%
+                           {row?.price_change_percentage_24h_in_currency?.toFixed(2)}%
                            </div>
                            
                            </div>
@@ -255,8 +267,8 @@ const CoinTable = () => {
                       
                         <TableCell align="right" style={{color:"black",width:"10%"}}>
                           {symbol}{" "}
-                          {numberWithCommas(
-                            row.market_cap.toString().slice(0, -6)
+                          {(
+                            row?.market_cap?.toString().slice(0, -6)
                           )}
                           M
                         </TableCell>
@@ -265,7 +277,7 @@ const CoinTable = () => {
                         )
                     })}
                     
-                   {page==1 ?  <HootDex/>:<></>}
+                   {/* {page==1 ?  <HootDex/>:<></>} */}
                  </TableBody>
                 </Table>
             )
